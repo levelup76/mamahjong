@@ -12,7 +12,7 @@ export const metadata: Metadata = {
     siteName: "Mamahjong",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "https://mamahjong.online/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "Mamahjong",
@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Mamahjong",
     description: "Boldog Anyák napját!",
-    images: ["/og-image.jpg"],
+    images: ["https://mamahjong.online/og-image.jpg"],
   },
 };
 

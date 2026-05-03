@@ -26,7 +26,12 @@ export async function middleware(request: NextRequest) {
     },
   });
 
-  await supabase.auth.getUser(); // refreshes if expiring
+  try {
+    await supabase.auth.getUser(); // refreshes if expiring
+  } catch {
+    // Supabase unreachable (cold start, network blip) — not fatal.
+    // Return the response without a refreshed session rather than 500-ing.
+  }
   return response;
 }
 
