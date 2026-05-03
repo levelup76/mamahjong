@@ -56,6 +56,27 @@ export function isHonor(code: TileCode): boolean {
 }
 
 /**
+ * Returns a CSS color for the glyph. Mimics traditional mahjong tile colors
+ * (bamboo green, characters black/red, dots navy, dragons red/green/blue,
+ * flowers/seasons warm) so the placeholder glyphs aren't all monochrome.
+ */
+export function glyphColor(code: TileCode): string {
+  const base = baseCode(code);
+  if (base.startsWith("bam-")) return "#1f6f3a";       // bamboo green
+  if (base.startsWith("char-")) {
+    return base === "char-1" ? "#b91c1c" : "#1f2937"; // 1万 traditionally red
+  }
+  if (base.startsWith("dot-")) return "#1d4ed8";       // dot navy
+  if (base === "honor-red") return "#b91c1c";
+  if (base === "honor-green") return "#15803d";
+  if (base === "honor-white") return "#1d4ed8";
+  if (base.startsWith("honor-")) return "#1f2937";     // winds: black
+  if (base.startsWith("flower-")) return "#be185d";    // pink
+  if (base.startsWith("season-")) return "#c2410c";    // warm orange
+  return "#1f2937";
+}
+
+/**
  * For a board-tagged honor tile like "honor-east@board-3" returns the asset
  * lookup key "board-3/east". Returns null for non-tagged or non-honor codes.
  */

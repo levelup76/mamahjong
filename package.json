@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
+    "dev:local": "./scripts/dev-local.sh",
+    "tileset:normalize": "./scripts/normalize-tileset.mjs",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"

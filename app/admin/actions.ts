@@ -43,7 +43,7 @@ function buildPath(
 }
 
 export type UploadResult =
-  | { ok: true }
+  | { ok: true; assetId?: string }
   | { ok: false; message: string };
 
 export async function uploadAsset(formData: FormData): Promise<UploadResult> {
@@ -84,22 +84,54 @@ export async function uploadAsset(formData: FormData): Promise<UploadResult> {
 
     if (kind !== "music") await deactivate;
 
-    const { error: insErr } = await supabase.from("assets").insert({
+    const insertPayload = {
       kind,
       board_id: boardId,
       slot_key: slotKey,
       storage_path: path,
       is_active: true,
       uploaded_by: userId,
-    });
+      crop_zoom: kind === "tile" ? 1 : null,
+      crop_x: kind === "tile" ? 0 : null,
+      crop_y: kind === "tile" ? 0 : null,
+    };
+    const { data: inserted, error: insErr } = await supabase
+      .from("assets")
+      .insert(insertPayload)
+      .select("id")
+      .single();
     if (insErr) return { ok: false, message: `DB: ${insErr.message}` };
 
     revalidatePath("/admin", "layout");
     revalidatePath("/", "layout");
-    return { ok: true };
+    return { ok: true, assetId: inserted?.id };
   } catch (e) {
     const msg = e instanceof Error ? e.message : "ismeretlen hiba";
     return { ok: false, message: msg };
+  }
+}
+
+export async function updateTileCrop(
+  assetId: string,
+  crop: { zoom: number; x: number; y: number },
+): Promise<UploadResult> {
+  try {
+    const { supabase } = await assertAdmin();
+    const { error } = await supabase
+      .from("assets")
+      .update({
+        crop_zoom: crop.zoom,
+        crop_x: crop.x,
+        crop_y: crop.y,
+      })
+      .eq("id", assetId)
+      .eq("kind", "tile");
+    if (error) return { ok: false, message: error.message };
+    revalidatePath("/admin", "layout");
+    revalidatePath("/", "layout");
+    return { ok: true, assetId };
+  } catch (e) {
+    return { ok: false, message: e instanceof Error ? e.message : "hiba" };
   }
 }
 

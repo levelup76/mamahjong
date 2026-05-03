@@ -8,7 +8,7 @@ export default function AudioControls() {
   const hasMusic = music.length > 0;
 
   return (
-    <div className="flex items-center gap-2 text-xs">
+    <div className="col-span-2 sm:col-span-1 flex items-center justify-end gap-2 text-xs">
       <button
         type="button"
         onClick={() => setMusicEnabled(!musicEnabled)}
@@ -39,7 +39,7 @@ export default function AudioControls() {
         step={0.05}
         value={volume}
         onChange={(e) => setVolume(Number(e.target.value))}
-        className="w-20 accent-amber-500"
+        className="w-16 sm:w-20 accent-amber-500"
         title="Hangerő"
       />
     </div>

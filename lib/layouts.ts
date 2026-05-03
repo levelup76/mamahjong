@@ -7,7 +7,7 @@
 
 import type { Position } from "./game";
 
-export type BoardId = 1 | 2 | 3 | 4 | 5;
+export type BoardId = 1 | 2 | 3 | 4 | 5 | 6;
 
 export type Layout = {
   id: BoardId;
@@ -67,17 +67,13 @@ const CROSS = expandBlocks([
   { z: 3, x0: 6,  y0: 8,  w: 4,  h: 2 }, // 8
 ]);
 
-// 4) Sárkány — 96 body + 4 tail + 8 head + 8 fins + 24 spine + 4 crest = 144
-const DRAGON = expandBlocks([
-  { z: 0, x0: 4,  y0: 4,  w: 16, h: 6 }, // 96 body
-  { z: 0, x0: 0,  y0: 5,  w: 2,  h: 2 }, // 4  tail
-  { z: 0, x0: 36, y0: 4,  w: 4,  h: 2 }, // 8  head
-  { z: 0, x0: 12, y0: 2,  w: 2,  h: 1 }, // 2  top fin 1
-  { z: 0, x0: 22, y0: 2,  w: 2,  h: 1 }, // 2  top fin 2
-  { z: 0, x0: 12, y0: 10, w: 2,  h: 1 }, // 2  bottom fin 1
-  { z: 0, x0: 22, y0: 10, w: 2,  h: 1 }, // 2  bottom fin 2
-  { z: 1, x0: 6,  y0: 5,  w: 12, h: 2 }, // 24 spine
-  { z: 2, x0: 10, y0: 5,  w: 2,  h: 2 }, // 4  crest
+// 4) Pagoda — portrait stepped tower. 12×24 footprint, fits mobile screens.
+// Layer counts: 72 + 40 + 24 + 8 = 144.
+const PAGODA = expandBlocks([
+  { z: 0, x0: 0, y0: 0, w: 6, h: 12 }, // 72 base
+  { z: 1, x0: 2, y0: 2, w: 4, h: 10 }, // 40
+  { z: 2, x0: 3, y0: 4, w: 3, h: 8  }, // 24 (half-step inset for staircase look)
+  { z: 3, x0: 4, y0: 8, w: 2, h: 4  }, // 8  top
 ]);
 
 // 5) Vár — 120 floor + 16 corners + 4 tower-tops + 4 keep = 144
@@ -92,6 +88,17 @@ const CASTLE = expandBlocks([
   { z: 2, x0: 0,  y0: 18, w: 1,  h: 1  }, // 1 SW top
   { z: 2, x0: 22, y0: 18, w: 1,  h: 1  }, // 1 SE top
   { z: 1, x0: 9,  y0: 7,  w: 2,  h: 2  }, // 4 central keep base
+]);
+
+// 6) Toronyház — narrow portrait tower. 10×24 footprint, 5 layers.
+// Half-step column offsets create the ascending staircase effect.
+// Layer counts: 60 + 44 + 21 + 14 + 5 = 144.
+const TOWER = expandBlocks([
+  { z: 0, x0: 0, y0: 0, w: 5, h: 12 }, // 60 base
+  { z: 1, x0: 1, y0: 0, w: 4, h: 11 }, // 44
+  { z: 2, x0: 2, y0: 4, w: 3, h: 7  }, // 21
+  { z: 3, x0: 3, y0: 6, w: 2, h: 7  }, // 14
+  { z: 4, x0: 4, y0: 8, w: 1, h: 5  }, // 5  spire
 ]);
 
 function bounds(positions: import("./game").Position[]): {
@@ -118,18 +125,20 @@ function assertCount(name: string, positions: import("./game").Position[]) {
 assertCount("Teknős", TURTLE);
 assertCount("Piramis", PYRAMID);
 assertCount("Kereszt", CROSS);
-assertCount("Sárkány", DRAGON);
+assertCount("Pagoda", PAGODA);
 assertCount("Vár", CASTLE);
+assertCount("Toronyház", TOWER);
 
 export const LAYOUTS: Record<BoardId, Layout> = {
-  1: { id: 1, name: "Teknős",  description: "A klasszikus mahjong forma — szelíd kezdés.", positions: TURTLE,  ...bounds(TURTLE)  },
-  2: { id: 2, name: "Piramis", description: "Lépcsős piramis négy szinttel.",              positions: PYRAMID, ...bounds(PYRAMID) },
-  3: { id: 3, name: "Kereszt", description: "Szimmetrikus kereszt négy emelettel.",         positions: CROSS,   ...bounds(CROSS)   },
-  4: { id: 4, name: "Sárkány", description: "Hosszú sárkány test, fej és farok.",           positions: DRAGON,  ...bounds(DRAGON)  },
-  5: { id: 5, name: "Vár",     description: "Négytornyú vár központi toronnyal.",           positions: CASTLE,  ...bounds(CASTLE)  },
+  1: { id: 1, name: "Teknős",    description: "A klasszikus mahjong forma — szelíd kezdés.",       positions: TURTLE,  ...bounds(TURTLE)  },
+  2: { id: 2, name: "Piramis",   description: "Lépcsős piramis négy szinttel.",                    positions: PYRAMID, ...bounds(PYRAMID) },
+  3: { id: 3, name: "Kereszt",   description: "Szimmetrikus kereszt négy emelettel.",              positions: CROSS,   ...bounds(CROSS)   },
+  4: { id: 4, name: "Pagoda",    description: "Álló pagoda — mobilra is jól illeszkedik.",         positions: PAGODA,  ...bounds(PAGODA)  },
+  5: { id: 5, name: "Vár",       description: "Négytornyú vár központi toronnyal.",                positions: CASTLE,  ...bounds(CASTLE)  },
+  6: { id: 6, name: "Toronyház", description: "Keskeny torony öt szinttel — telefonra szabva.",   positions: TOWER,   ...bounds(TOWER)   },
 };
 
-export const BOARD_IDS: BoardId[] = [1, 2, 3, 4, 5];
+export const BOARD_IDS: BoardId[] = [1, 2, 3, 4, 5, 6];
 
 export function getLayout(id: BoardId): Layout {
   return LAYOUTS[id];

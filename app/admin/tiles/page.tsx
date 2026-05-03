@@ -1,8 +1,6 @@
 import { getSupabaseServer } from "@/lib/supabase/server";
 import { LAYOUTS, BOARD_IDS } from "@/lib/layouts";
-import { glyphFor } from "@/lib/glyphs";
-import AssetUploader from "@/components/AssetUploader";
-import AssetItem from "@/components/AssetItem";
+import TileSlot from "@/components/TileSlot";
 
 const HONOR_SLOTS: { key: string; label: string }[] = [
   { key: "east", label: "Kelet" },
@@ -20,6 +18,9 @@ type Row = {
   slot_key: string | null;
   storage_path: string;
   is_active: boolean;
+  crop_zoom: number | null;
+  crop_x: number | null;
+  crop_y: number | null;
 };
 
 function publicUrl(path: string) {
@@ -30,7 +31,7 @@ export default async function TilesPage() {
   const supabase = await getSupabaseServer();
   const { data } = await supabase
     .from("assets")
-    .select("id, board_id, slot_key, storage_path, is_active")
+    .select("id, board_id, slot_key, storage_path, is_active, crop_zoom, crop_x, crop_y")
     .eq("kind", "tile")
     .order("uploaded_at", { ascending: false });
   const rows = (data ?? []) as Row[];
@@ -38,22 +39,21 @@ export default async function TilesPage() {
   return (
     <div>
       <h1 className="font-display text-3xl mb-2">Egyedi kövek</h1>
-      <p className="opacity-80 text-sm mb-6">
-        5 pálya × 7 honőr = 35 családi fotó. Ajánlott formátum: négyzetes PNG
-        átlátszó háttérrel, ~256×256 px. Ha nincs feltöltve, alapértelmezett
-        glif jelenik meg.
+      <p className="opacity-80 text-sm mb-6 max-w-3xl">
+        Pályánként 7 honőr-csempe. Kattints egy kőre és nyomj <kbd>⌘V</kbd>-t a
+        vágólap tartalmának beillesztéséhez (pl. macOS Photos &rarr; jobb
+        klikk &rarr; <em>Másolás (Tárgy)</em>), vagy használd a{" "}
+        <strong>Tallózás</strong> gombot. Ajánlott formátum: négyzetes PNG
+        átlátszó háttérrel.
       </p>
 
-      <div className="space-y-8">
+      <div className="space-y-6">
         {BOARD_IDS.map((boardId) => (
-          <section
-            key={boardId}
-            className="rounded-xl bg-slate-800/60 p-4"
-          >
+          <section key={boardId} className="rounded-xl bg-slate-800/60 p-4">
             <h2 className="font-display text-xl mb-3">
               {boardId}. {LAYOUTS[boardId].name}
             </h2>
-            <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
               {HONOR_SLOTS.map((slot) => {
                 const active = rows.find(
                   (r) =>
@@ -62,41 +62,17 @@ export default async function TilesPage() {
                     r.is_active,
                 );
                 return (
-                  <div
+                  <TileSlot
                     key={slot.key}
-                    className="rounded bg-slate-900/40 p-2 flex flex-col items-center gap-2"
-                  >
-                    <div className="text-xs opacity-80">{slot.label}</div>
-                    <div className="w-20 h-20 rounded bg-amber-50 flex items-center justify-center overflow-hidden">
-                      {active ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={publicUrl(active.storage_path)}
-                          alt={slot.label}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <span className="text-4xl text-slate-800">
-                          {glyphFor(`honor-${slot.key}`)}
-                        </span>
-                      )}
-                    </div>
-                    <AssetUploader
-                      kind="tile"
-                      boardId={boardId}
-                      slotKey={slot.key}
-                      accept="image/*"
-                      compact
-                    />
-                    {active && (
-                      <AssetItem
-                        id={active.id}
-                        url={publicUrl(active.storage_path)}
-                        kind="tile"
-                        isActive
-                      />
-                    )}
-                  </div>
+                    boardId={boardId}
+                    slotKey={slot.key}
+                    label={slot.label}
+                    activeAssetId={active?.id ?? null}
+                    activeUrl={active ? publicUrl(active.storage_path) : null}
+                    activeCropZoom={active?.crop_zoom ?? 1}
+                    activeCropX={active?.crop_x ?? 0}
+                    activeCropY={active?.crop_y ?? 0}
+                  />
                 );
               })}
             </div>

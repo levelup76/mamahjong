@@ -19,6 +19,16 @@ export type AssetRow = {
   slot_key: string | null;
   storage_path: string;
   is_active: boolean;
+  crop_zoom: number | null;
+  crop_x: number | null;
+  crop_y: number | null;
+};
+
+export type ResolvedTileAsset = {
+  url: string;
+  cropZoom: number;
+  cropX: number;
+  cropY: number;
 };
 
 /** Convert a storage_path to a public URL. */
@@ -53,8 +63,8 @@ export async function fetchAssets(): Promise<AssetRow[]> {
 export type ResolvedAssets = {
   /** Background URL, optionally per board (boardId 1..5) or global (boardId null). */
   backgrounds: { boardId: number | null; url: string }[];
-  /** Map from "board-N/slot" → URL for honor tile images. */
-  tiles: Map<string, string>;
+  /** Map from "board-N/slot" → image and crop settings for honor tile images. */
+  tiles: Map<string, ResolvedTileAsset>;
   /** Sound effects keyed by slot ('click','match','win','stuck'). */
   sounds: Map<string, string>;
   /** Background music tracks (multiple supported; first is default). */
@@ -75,7 +85,12 @@ export async function resolveAllAssets(): Promise<ResolvedAssets> {
     if (r.kind === "background") {
       result.backgrounds.push({ boardId: r.board_id, url });
     } else if (r.kind === "tile" && r.board_id && r.slot_key) {
-      result.tiles.set(`board-${r.board_id}/${r.slot_key}`, url);
+      result.tiles.set(`board-${r.board_id}/${r.slot_key}`, {
+        url,
+        cropZoom: r.crop_zoom ?? 1,
+        cropX: r.crop_x ?? 0,
+        cropY: r.crop_y ?? 0,
+      });
     } else if (r.kind === "sound" && r.slot_key) {
       result.sounds.set(r.slot_key, url);
     } else if (r.kind === "music") {

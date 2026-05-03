@@ -130,35 +130,52 @@ export function dealSolvable(
     throw new Error(`expected 144 positions, got ${positions.length}`);
   }
 
-  // Build mutable tile list with monotonic ids.
-  const working: Tile[] = positions.map((p, i) => ({
-    ...p,
-    id: i,
-    code: "",
-    removed: false,
-  }));
+  // The greedy removal-order simulation can get stuck on its very last pair
+  // when both remaining tiles are mutual-side blockers (e.g. a 1×2 column at
+  // the top of a stepped pyramid). Retry the whole simulation a few times —
+  // each attempt randomizes pair selection, so a couple of tries reliably
+  // produces a fully valid order on every layout we ship.
+  const MAX_ATTEMPTS = 50;
+  let removalOrder: Tile[] | null = null;
+  let working: Tile[] = [];
+  let lastError: Error | null = null;
 
-  const removalOrder: Tile[] = [];
-
-  for (let step = 0; step < 72; step++) {
-    const free = working.filter((t) => !t.removed && isFree(t, working));
-    if (free.length < 2) {
-      // Layout is structurally unsolvable from full state — bail.
-      throw new Error(
-        `dealSolvable: stuck after ${step} pairs removed; only ${free.length} free tiles`,
-      );
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    working = positions.map((p, i) => ({
+      ...p,
+      id: i,
+      code: "",
+      removed: false,
+    }));
+    const order: Tile[] = [];
+    let stuck = false;
+    for (let step = 0; step < 72; step++) {
+      const free = working.filter((t) => !t.removed && isFree(t, working));
+      if (free.length < 2) {
+        stuck = true;
+        lastError = new Error(
+          `dealSolvable: stuck after ${step} pairs removed; only ${free.length} free tiles (attempt ${attempt + 1})`,
+        );
+        break;
+      }
+      const shuffled = shuffle(free, rng);
+      const a = shuffled[0];
+      const b = shuffled[1];
+      a.removed = true;
+      b.removed = true;
+      order.push(a, b);
     }
-    const shuffled = shuffle(free, rng);
-    const a = shuffled[0];
-    const b = shuffled[1];
-    a.removed = true;
-    b.removed = true;
-    removalOrder.push(a, b);
+    if (!stuck) {
+      removalOrder = order;
+      break;
+    }
+  }
+
+  if (!removalOrder) {
+    throw lastError ?? new Error("dealSolvable: failed to find a valid order");
   }
 
   // Assign codes: pair k goes to removalOrder[2k], removalOrder[2k+1].
-  // (First removed pair gets the LAST-played pair-code — order doesn't actually
-  // matter since pairs are independent, but we shuffle pairs anyway.)
   const pairs = shuffle(buildPairs(), rng);
 
   for (let k = 0; k < 72; k++) {

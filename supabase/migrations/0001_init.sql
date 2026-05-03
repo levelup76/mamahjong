@@ -43,7 +43,7 @@ create trigger on_auth_user_created
 create table if not exists public.scores (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users on delete cascade,
-  board_id smallint not null check (board_id between 1 and 5),
+  board_id smallint not null check (board_id between 1 and 6),
   time_seconds int not null check (time_seconds >= 0),
   won boolean not null,
   moves int,
@@ -70,7 +70,7 @@ create policy "scores_insert_self" on public.scores
 create table if not exists public.assets (
   id uuid primary key default gen_random_uuid(),
   kind text not null check (kind in ('background','music','sound','tile')),
-  board_id smallint check (board_id between 1 and 5),
+  board_id smallint check (board_id between 1 and 6),
   slot_key text,                 -- e.g. 'east','red','click','match','win','default'
   storage_path text not null,    -- path inside the 'assets' bucket
   is_active boolean not null default true,

@@ -27,7 +27,8 @@ export default function AssetUploader({
 
   function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+    const form = e.currentTarget;
+    const fd = new FormData(form);
     fd.set("kind", kind);
     if (boardId !== undefined) fd.set("board_id", boardId === null ? "" : String(boardId));
     if (slotKey) fd.set("slot_key", slotKey);
@@ -37,7 +38,7 @@ export default function AssetUploader({
       const res = await uploadAsset(fd);
       if (res.ok) {
         setMsg("Feltöltve.");
-        e.currentTarget.reset();
+        form.reset();
       } else {
         setErr(res.message);
       }
