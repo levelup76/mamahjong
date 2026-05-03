@@ -25,7 +25,7 @@ export default async function Home() {
       <header className="max-w-4xl mx-auto text-center mb-10">
         <h1 className="font-display text-5xl mb-2">Mamahjong</h1>
         <p className="opacity-80">
-          Anyák napi mahjong solitaire — válassz egy pályát.
+          Boldog Anyák napját! Válassz egy pályát!
         </p>
       </header>
 
