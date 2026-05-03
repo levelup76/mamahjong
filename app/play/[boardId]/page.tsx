@@ -32,7 +32,8 @@ export default async function PlayPage({ params }: { params: Params }) {
               backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.55)), url(${bg})`,
               backgroundSize: "cover",
               backgroundPosition: "center",
-              backgroundAttachment: "fixed",
+              // background-attachment:fixed is broken on iOS Safari — causes GPU
+              // memory spikes and can trigger tab kills on older iPhones.
             }
           : undefined
       }

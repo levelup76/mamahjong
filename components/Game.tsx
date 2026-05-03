@@ -127,6 +127,15 @@ export default function Game({ boardId, loggedIn, tileImages }: Props) {
     return () => clearInterval(id);
   }, [won, stuck, paused]);
 
+  // Pause automatically when iOS sends the page to the background.
+  useEffect(() => {
+    function onVisibility() {
+      if (document.hidden) setPaused(true);
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
   const handleClick = useCallback(
     (clicked: Tile) => {
       // Need an up-to-date copy with removed flags from current state.

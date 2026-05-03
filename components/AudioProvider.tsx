@@ -63,7 +63,9 @@ export default function AudioProvider({ sounds, music, children }: Props) {
     const map = new Map<SoundSlot, HTMLAudioElement>();
     sounds.forEach((url, slot) => {
       const el = new Audio(url);
-      el.preload = "auto";
+      // "none" keeps sound files out of memory until first play.
+      // iOS Safari kills tabs aggressively when audio buffers consume RAM.
+      el.preload = "none";
       el.volume = volume;
       map.set(slot, el);
     });

@@ -10,8 +10,7 @@ export default function LoginPage() {
   async function handleGoogle() {
     setBusy(true);
     setError(null);
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    const origin = window.location.origin;
     const { error } = await getSupabaseBrowser().auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: `${origin}/auth/callback` },
