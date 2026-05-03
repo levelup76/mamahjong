@@ -26,31 +26,32 @@ function fmtTime(s: number): string {
 async function fetchScoresByBoard(): Promise<Map<number, ScoreRow[]>> {
   if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return new Map();
   const supabase = await getSupabaseServer();
-  const { data, error } = await supabase
+
+  const { data: scores, error } = await supabase
     .from("scores")
-    .select(
-      "id, user_id, board_id, time_seconds, won, moves, completed_at, profiles(display_name)",
-    )
+    .select("id, user_id, board_id, time_seconds, won, moves, completed_at")
     .eq("won", true)
     .order("time_seconds", { ascending: true })
     .limit(200);
-  if (error || !data) return new Map();
+  if (error || !scores) return new Map();
+
+  // scores.user_id → auth.users ← profiles.id: no direct FK, so we fetch
+  // display names in a separate query instead of a PostgREST embedded join.
+  const userIds = [...new Set(scores.map((r) => r.user_id))];
+  const displayNames = new Map<string, string | null>();
+  if (userIds.length > 0) {
+    const { data: profiles } = await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .in("id", userIds);
+    for (const p of profiles ?? []) displayNames.set(p.id, p.display_name);
+  }
 
   const byBoard = new Map<number, ScoreRow[]>();
-  for (const r of data as unknown as Array<
-    Omit<ScoreRow, "display_name"> & {
-      profiles: { display_name: string | null } | null;
-    }
-  >) {
+  for (const r of scores) {
     const row: ScoreRow = {
-      id: r.id,
-      user_id: r.user_id,
-      board_id: r.board_id,
-      time_seconds: r.time_seconds,
-      won: r.won,
-      moves: r.moves,
-      completed_at: r.completed_at,
-      display_name: r.profiles?.display_name ?? null,
+      ...r,
+      display_name: displayNames.get(r.user_id) ?? null,
     };
     const arr = byBoard.get(r.board_id) ?? [];
     arr.push(row);
