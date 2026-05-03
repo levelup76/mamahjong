@@ -2,8 +2,31 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://mamahjong.online"),
   title: "Mamahjong",
-  description: "Anyák napi mahjong solitaire",
+  description: "Boldog Anyák napját! Személyes mahjong solitaire édesanyámnak.",
+  openGraph: {
+    title: "Mamahjong",
+    description: "Boldog Anyák napját, drága Anyukám!",
+    url: "https://mamahjong.online",
+    siteName: "Mamahjong",
+    images: [
+      {
+        url: "/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Mamahjong",
+      },
+    ],
+    locale: "hu_HU",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Mamahjong",
+    description: "Boldog Anyák napját!",
+    images: ["/og-image.jpg"],
+  },
 };
 
 export default function RootLayout({

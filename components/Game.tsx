@@ -298,7 +298,7 @@ export default function Game({ boardId, loggedIn, tileImages }: Props) {
         </div>
       </header>
 
-      <div className="relative flex-1 grid place-items-center min-h-0 min-w-0 overflow-hidden">
+      <div className="relative flex-1 grid place-items-center min-h-0 min-w-0 overflow-hidden pt-4 pb-2 sm:pt-6 sm:pb-3">
         {paused && !won && !stuck && (
           <div className="absolute inset-0 z-[100000] grid place-items-center bg-black/60 rounded-xl">
             <div className="text-3xl font-display">Szünet</div>
