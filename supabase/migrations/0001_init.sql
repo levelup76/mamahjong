@@ -104,26 +104,26 @@ create policy "assets_admin_write" on public.assets
 -- Storage RLS: only admins can write; anyone can read.
 
 -- Read policy (public bucket already allows read, but if you keep it private use this):
--- create policy "Public read assets"
---   on storage.objects for select
---   using (bucket_id = 'assets');
+create policy "Public read assets"
+  on storage.objects for select
+  using (bucket_id = 'assets');
 
 -- Write policy (admins only):
--- create policy "Admin write assets"
---   on storage.objects for insert
---   with check (
---     bucket_id = 'assets'
---     and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
---   );
+create policy "Admin write assets"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'assets'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
 -- create policy "Admin update assets"
---   on storage.objects for update
---   using (
---     bucket_id = 'assets'
---     and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
---   );
+  on storage.objects for update
+  using (
+    bucket_id = 'assets'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );
 -- create policy "Admin delete assets"
---   on storage.objects for delete
---   using (
---     bucket_id = 'assets'
---     and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
---   );
+  on storage.objects for delete
+  using (
+    bucket_id = 'assets'
+    and exists (select 1 from public.profiles p where p.id = auth.uid() and p.is_admin)
+  );

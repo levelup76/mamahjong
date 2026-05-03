@@ -2,6 +2,10 @@ import Link from "next/link";
 import { getSupabaseServer, getCurrentUser } from "@/lib/supabase/server";
 import { LAYOUTS, BOARD_IDS } from "@/lib/layouts";
 
+// Always re-fetch the leaderboard server-side; we don't want stale data after
+// a new score is recorded.
+export const dynamic = "force-dynamic";
+
 type ScoreRow = {
   id: string;
   user_id: string;
