@@ -1,0 +1,952 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mahjong</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  overscroll-behavior: none;
+  font-family: Georgia, "Times New Roman", serif;
+  background: linear-gradient(135deg, #14532d 0%, #052e16 100%);
+  background-attachment: fixed;
+  color: #f8fafc;
+}
+
+/* ── VIEWS ── */
+.view { display: none; min-height: 100dvh; }
+.view.active { display: flex; flex-direction: column; }
+
+/* ── HOME ── */
+#view-home { padding: 2.5rem 1.5rem; }
+#view-home header { text-align: center; margin-bottom: 2.5rem; }
+#view-home h1 { font-size: 3rem; letter-spacing: 0.05em; }
+#view-home p  { opacity: 0.75; margin-top: 0.4rem; }
+.board-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+  max-width: 900px;
+  margin: 0 auto 2rem;
+}
+.board-card {
+  display: block;
+  background: rgba(255,255,255,0.08);
+  border-radius: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  transition: background 0.15s;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.board-card:hover { background: rgba(255,255,255,0.15); }
+.board-card .num   { font-size: 0.7rem; text-transform: uppercase; opacity: 0.55; }
+.board-card .name  { font-size: 1.4rem; margin-top: 0.15rem; }
+.board-card .desc  { font-size: 0.82rem; opacity: 0.75; margin-top: 0.5rem; }
+.board-card .meta  { font-size: 0.7rem; opacity: 0.45; margin-top: 0.75rem; }
+.home-footer {
+  text-align: center;
+  margin-top: auto;
+  padding-top: 1.5rem;
+  font-size: 0.75rem;
+  opacity: 0.4;
+}
+.lb-link {
+  display: block;
+  text-align: center;
+  margin: 0 auto 1.5rem;
+  color: #fbbf24;
+  text-decoration: underline;
+  cursor: pointer;
+  background: none;
+  border: none;
+  font-family: inherit;
+  font-size: 0.9rem;
+}
+
+/* ── GAME ── */
+#view-game {
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: 0.5rem;
+}
+.game-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  flex-shrink: 0;
+}
+.game-title-row { display: flex; align-items: baseline; gap: 0.75rem; min-width: 0; }
+.back-btn {
+  font-size: 0.82rem;
+  opacity: 0.8;
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: underline;
+}
+.back-btn:hover { opacity: 1; }
+.game-title { font-size: 1.3rem; white-space: nowrap; }
+.game-controls {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 0.35rem;
+  align-items: center;
+}
+@media (min-width: 600px) {
+  .game-controls { display: flex; gap: 0.5rem; }
+}
+.stat-badge {
+  background: rgba(0,0,0,0.25);
+  border-radius: 0.3rem;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+.btn {
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.35rem;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  color: #f8fafc;
+  background: #334155;
+  transition: background 0.1s;
+}
+.btn:hover:not(:disabled) { background: #475569; }
+.btn:disabled { opacity: 0.4; cursor: default; }
+.btn-amber { background: #b45309; }
+.btn-amber:hover:not(:disabled) { background: #d97706; }
+
+/* ── BOARD AREA ── */
+.board-wrapper {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  display: grid;
+  place-items: center;
+  position: relative;
+  overflow: hidden;
+  padding: 0.25rem;
+}
+.board-stage {
+  position: absolute;
+  top: 0; left: 0;
+  transform-origin: top left;
+}
+
+/* ── TILES ── */
+.tile {
+  position: absolute;
+  background: transparent;
+  border: 0;
+  padding: 0;
+  border-radius: 0.35rem;
+  filter: drop-shadow(0 2px 2px rgba(0,0,0,0.32));
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform 0.07s;
+}
+.tile:hover:not(:disabled) { transform: translateY(-2px); }
+.tile.selected {
+  filter: drop-shadow(0 0 5px rgba(250,204,21,0.9)) drop-shadow(0 2px 2px rgba(0,0,0,0.32));
+}
+.tile.locked {
+  cursor: default;
+  filter: brightness(0.74) saturate(0.78) drop-shadow(0 2px 2px rgba(0,0,0,0.28));
+}
+.tile.hinted {
+  outline: 3px solid #7dd3fc;
+  outline-offset: -1px;
+}
+.tile img.tile-base {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+  pointer-events: none;
+  user-select: none;
+}
+.tile img.tile-art {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── OVERLAYS ── */
+.overlay {
+  position: absolute; inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(0,0,0,0.6);
+  border-radius: 0.75rem;
+}
+.overlay-box {
+  background: #1e3a26;
+  border-radius: 0.75rem;
+  padding: 1.5rem 2rem;
+  text-align: center;
+  max-width: 340px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+}
+.overlay-box h2 { font-size: 1.5rem; margin-bottom: 0.75rem; }
+.overlay-box p  { opacity: 0.85; margin-bottom: 0.75rem; font-size: 0.9rem; }
+.name-input {
+  width: 100%;
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.4rem;
+  border: 1px solid #4ade80;
+  background: #14532d;
+  color: #f8fafc;
+  font-size: 1rem;
+  font-family: inherit;
+  margin-bottom: 0.75rem;
+}
+.name-input:focus { outline: 2px solid #4ade80; }
+.overlay-btns { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; }
+.btn-green { background: #15803d; }
+.btn-green:hover { background: #16a34a; }
+.save-status { font-size: 0.78rem; opacity: 0.8; margin-top: 0.5rem; min-height: 1.2em; }
+
+/* ── LEADERBOARD ── */
+#view-leaderboard { padding: 2rem 1.5rem; }
+#view-leaderboard header {
+  display: flex; align-items: center; gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+#view-leaderboard h1 { font-size: 1.8rem; }
+.lb-tabs {
+  display: flex; flex-wrap: wrap; gap: 0.4rem;
+  margin-bottom: 1.25rem;
+}
+.lb-tab {
+  padding: 0.35rem 0.9rem;
+  border-radius: 2rem;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  background: rgba(255,255,255,0.1);
+  color: inherit;
+  transition: background 0.1s;
+}
+.lb-tab:hover { background: rgba(255,255,255,0.18); }
+.lb-tab.active { background: #15803d; }
+.lb-table {
+  width: 100%;
+  max-width: 540px;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+.lb-table th {
+  text-align: left;
+  padding: 0.4rem 0.75rem;
+  opacity: 0.55;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid rgba(255,255,255,0.12);
+}
+.lb-table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255,255,255,0.07);
+}
+.lb-table tr:first-child td { color: #fbbf24; }
+.lb-empty { opacity: 0.5; font-size: 0.9rem; margin-top: 1rem; }
+.lb-loading { opacity: 0.6; font-size: 0.9rem; margin-top: 1rem; }
+</style>
+</head>
+<body>
+
+<!-- HOME VIEW -->
+<div id="view-home" class="view active">
+  <header>
+    <h1>Mahjong</h1>
+    <p>Válassz egy pályát a játékhoz!</p>
+  </header>
+  <div class="board-grid" id="board-grid"></div>
+  <button class="lb-link" onclick="showLeaderboard()">🏆 Toplista megtekintése</button>
+  <div class="home-footer">Boldog Anyák napját! 💛</div>
+</div>
+
+<!-- GAME VIEW -->
+<div id="view-game" class="view">
+  <header class="game-header">
+    <div class="game-title-row">
+      <button class="back-btn" onclick="showHome()">← Vissza</button>
+      <span class="game-title" id="game-title"></span>
+    </div>
+    <div class="game-controls">
+      <span class="stat-badge">Idő: <strong id="game-time">0:00</strong></span>
+      <span class="stat-badge">Kő: <strong id="game-remaining">0</strong></span>
+      <button class="btn" id="btn-undo" onclick="handleUndo()" disabled>Visszavon</button>
+      <button class="btn" onclick="handleHint()">Tipp</button>
+      <button class="btn" id="btn-pause" onclick="handlePause()">Szünet</button>
+      <button class="btn btn-amber" onclick="handleNewGame()">Új játék</button>
+    </div>
+  </header>
+  <div class="board-wrapper" id="board-wrapper">
+    <div class="board-stage" id="board-stage"></div>
+
+    <!-- Pause overlay -->
+    <div class="overlay" id="overlay-pause" style="display:none">
+      <div class="overlay-box">
+        <h2>Szünet</h2>
+        <button class="btn btn-amber" onclick="handlePause()">Folytatás</button>
+      </div>
+    </div>
+
+    <!-- Win overlay -->
+    <div class="overlay" id="overlay-win" style="display:none">
+      <div class="overlay-box">
+        <h2>🎉 Gratulálunk!</h2>
+        <p id="win-text"></p>
+        <input class="name-input" type="text" id="player-name" placeholder="Neved a toplistához…" maxlength="30">
+        <div class="overlay-btns">
+          <button class="btn btn-green" onclick="submitScore()">Mentés</button>
+          <button class="btn" onclick="skipScore()">Kihagyás</button>
+          <button class="btn btn-amber" onclick="handleNewGame()">Új játék</button>
+        </div>
+        <div class="save-status" id="save-status"></div>
+      </div>
+    </div>
+
+    <!-- Stuck overlay -->
+    <div class="overlay" id="overlay-stuck" style="display:none">
+      <div class="overlay-box">
+        <h2>Nincs lépés</h2>
+        <p>Nincs több párosítható kő.</p>
+        <button class="btn btn-amber" onclick="handleNewGame()">Új játék</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- LEADERBOARD VIEW -->
+<div id="view-leaderboard" class="view">
+  <header>
+    <button class="back-btn" onclick="showHome()">← Vissza</button>
+    <h1>🏆 Toplista</h1>
+  </header>
+  <div class="lb-tabs" id="lb-tabs"></div>
+  <div id="lb-content"></div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const SCORES_API   = './scores.php';
+const BAMBOO_ROOT  = './tilesets/bamboo-normalized';
+const TILE_FACE    = BAMBOO_ROOT + '/tile.png';
+const TILE_SEL     = BAMBOO_ROOT + '/tile_selected.png';
+const UNIT         = 26;
+const TILE_W       = UNIT * 2;                   // 52
+const TILE_H       = TILE_W * (256 / 195);       // ≈68.3
+const STEP_X       = UNIT;                       // 26
+const STEP_Y       = 33.5;
+const Z_OFF        = 5;
+
+// ═══════════════════════════════════════════
+// LAYOUTS
+// ═══════════════════════════════════════════
+function expandBlocks(blocks) {
+  const out = [];
+  for (const b of blocks) {
+    for (let iy = 0; iy < b.h; iy++) {
+      for (let ix = 0; ix < b.w; ix++) {
+        out.push({ x: b.x0 + ix * 2, y: b.y0 + iy * 2, z: b.z });
+      }
+    }
+  }
+  return out;
+}
+function bounds(positions) {
+  let mx = 0, my = 0;
+  for (const p of positions) {
+    if (p.x + 2 > mx) mx = p.x + 2;
+    if (p.y + 2 > my) my = p.y + 2;
+  }
+  return { width: mx, height: my };
+}
+
+const POS = {
+  turtle: expandBlocks([
+    {z:0,x0:4, y0:0, w:12,h:1},{z:0,x0:2, y0:2, w:14,h:1},
+    {z:0,x0:0, y0:4, w:16,h:1},{z:0,x0:0, y0:6, w:16,h:1},
+    {z:0,x0:0, y0:8, w:16,h:1},{z:0,x0:0, y0:10,w:16,h:1},
+    {z:0,x0:2, y0:12,w:14,h:1},{z:0,x0:4, y0:14,w:12,h:1},
+    {z:1,x0:4, y0:4, w:5, h:4},{z:2,x0:6, y0:6, w:3, h:2},
+    {z:3,x0:7, y0:7, w:2, h:1},
+  ]),
+  pyramid: expandBlocks([
+    {z:0,x0:0,y0:0,w:10,h:9},{z:1,x0:1,y0:2,w:8,h:5},
+    {z:2,x0:3,y0:4,w:6,h:2},{z:3,x0:4,y0:5,w:2,h:1},
+  ]),
+  cross: expandBlocks([
+    {z:0,x0:0, y0:6, w:16,h:4},{z:0,x0:12,y0:0, w:4, h:3},
+    {z:0,x0:12,y0:16,w:4, h:3},{z:1,x0:2, y0:8, w:12,h:2},
+    {z:1,x0:13,y0:4, w:2, h:2},{z:1,x0:13,y0:14,w:2, h:2},
+    {z:2,x0:4, y0:8, w:8, h:2},{z:3,x0:6, y0:8, w:4, h:2},
+  ]),
+  pagoda: expandBlocks([
+    {z:0,x0:0,y0:0,w:6,h:12},{z:1,x0:2,y0:2,w:4,h:10},
+    {z:2,x0:3,y0:4,w:3,h:8},{z:3,x0:4,y0:8,w:2,h:4},
+  ]),
+  castle: expandBlocks([
+    {z:0,x0:0, y0:0, w:12,h:10},{z:1,x0:0, y0:0, w:2,h:2},
+    {z:1,x0:20,y0:0, w:2, h:2},{z:1,x0:0, y0:16,w:2,h:2},
+    {z:1,x0:20,y0:16,w:2, h:2},{z:2,x0:0, y0:0, w:1,h:1},
+    {z:2,x0:22,y0:0, w:1, h:1},{z:2,x0:0, y0:18,w:1,h:1},
+    {z:2,x0:22,y0:18,w:1, h:1},{z:1,x0:9, y0:7, w:2,h:2},
+  ]),
+  tower: expandBlocks([
+    {z:0,x0:0,y0:0,w:5,h:12},{z:1,x0:1,y0:0,w:4,h:11},
+    {z:2,x0:2,y0:4,w:3,h:7},{z:3,x0:3,y0:6,w:2,h:7},
+    {z:4,x0:4,y0:8,w:1,h:5},
+  ]),
+};
+
+const LAYOUTS = [
+  { id:1, name:'Teknős',    desc:'A klasszikus mahjong forma — szelíd kezdés.',      pos: POS.turtle  },
+  { id:2, name:'Piramis',   desc:'Lépcsős piramis négy szinttel.',                   pos: POS.pyramid },
+  { id:3, name:'Kereszt',   desc:'Szimmetrikus kereszt négy emelettel.',             pos: POS.cross   },
+  { id:4, name:'Pagoda',    desc:'Álló pagoda — mobilra is jól illeszkedik.',        pos: POS.pagoda  },
+  { id:5, name:'Vár',       desc:'Négytornyú vár központi toronnyal.',               pos: POS.castle  },
+  { id:6, name:'Toronyház', desc:'Keskeny torony öt szinttel — telefonra szabva.',   pos: POS.tower   },
+].map(l => ({ ...l, ...bounds(l.pos) }));
+
+// ═══════════════════════════════════════════
+// GAME LOGIC
+// ═══════════════════════════════════════════
+function buildPairs() {
+  const pairs = [];
+  for (const suit of ['bam','char','dot']) {
+    for (let r = 1; r <= 9; r++) {
+      const c = `${suit}-${r}`;
+      pairs.push([c,c],[c,c]);
+    }
+  }
+  for (const w of ['east','south','west','north']) {
+    const c = `honor-${w}`;
+    pairs.push([c,c],[c,c]);
+  }
+  for (const d of ['red','green','white']) {
+    const c = `honor-${d}`;
+    pairs.push([c,c],[c,c]);
+  }
+  pairs.push(['flower-1','flower-2'],['flower-3','flower-4']);
+  pairs.push(['season-1','season-2'],['season-3','season-4']);
+  return pairs; // 72 pairs = 144 tiles
+}
+
+function matches(a, b) {
+  if (a === b) return true;
+  if (a.startsWith('flower-') && b.startsWith('flower-')) return true;
+  if (a.startsWith('season-') && b.startsWith('season-')) return true;
+  return false;
+}
+
+function rectsOverlap(a, b) {
+  return Math.abs(a.x - b.x) < 2 && Math.abs(a.y - b.y) < 2;
+}
+
+function isFree(tile, all) {
+  if (tile.removed) return false;
+  for (const o of all) {
+    if (o.removed || o.id === tile.id) continue;
+    if (o.z === tile.z + 1 && rectsOverlap(tile, o)) return false;
+  }
+  let left = false, right = false;
+  for (const o of all) {
+    if (o.removed || o.id === tile.id || o.z !== tile.z) continue;
+    if (Math.abs(o.y - tile.y) >= 2) continue;
+    if (!left  && o.x === tile.x - 2) left  = true;
+    if (!right && o.x === tile.x + 2) right = true;
+    if (left && right) return false;
+  }
+  return !left || !right;
+}
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function dealSolvable(positions) {
+  const MAX = 50;
+  let removalOrder = null, working = [], lastErr = null;
+  for (let attempt = 0; attempt < MAX; attempt++) {
+    working = positions.map((p, i) => ({ ...p, id: i, code: '', removed: false }));
+    const order = [];
+    let stuck = false;
+    for (let step = 0; step < 72; step++) {
+      const free = working.filter(t => !t.removed && isFree(t, working));
+      if (free.length < 2) { stuck = true; lastErr = new Error(`stuck at step ${step}`); break; }
+      const sh = shuffle(free);
+      sh[0].removed = sh[1].removed = true;
+      order.push(sh[0], sh[1]);
+    }
+    if (!stuck) { removalOrder = order; break; }
+  }
+  if (!removalOrder) throw lastErr;
+  const pairs = shuffle(buildPairs());
+  for (let k = 0; k < 72; k++) {
+    removalOrder[2*k].code   = pairs[k][0];
+    removalOrder[2*k+1].code = pairs[k][1];
+  }
+  for (const t of working) t.removed = false;
+  return working;
+}
+
+// ═══════════════════════════════════════════
+// TILE ART
+// ═══════════════════════════════════════════
+const BAMBOO_CODES = new Set([
+  ...Array.from({length:9},(_,i)=>`bam-${i+1}`),
+  ...Array.from({length:9},(_,i)=>`char-${i+1}`),
+  ...Array.from({length:9},(_,i)=>`dot-${i+1}`),
+  ...Array.from({length:4},(_,i)=>`flower-${i+1}`),
+  ...Array.from({length:4},(_,i)=>`season-${i+1}`),
+  'honor-east','honor-south','honor-west','honor-north',
+  'honor-red','honor-green','honor-white',
+]);
+
+function tileArtUrl(code) {
+  return BAMBOO_CODES.has(code) ? `${BAMBOO_ROOT}/${code}.png` : null;
+}
+
+// ═══════════════════════════════════════════
+// GAME STATE
+// ═══════════════════════════════════════════
+let G = null; // active game state
+
+function newGame(layoutId) {
+  const layout = LAYOUTS.find(l => l.id === layoutId);
+  G = {
+    layout,
+    tiles:      dealSolvable(layout.pos),
+    selectedId: null,
+    history:    [],
+    seconds:    0,
+    paused:     false,
+    won:        false,
+    stuck:      false,
+    hintedIds:  new Set(),
+    hintTimer:  null,
+    scoreDone:  false,
+  };
+  clearInterval(window._timerInterval);
+  window._timerInterval = setInterval(tickTimer, 1000);
+  updateHeader();
+  render();
+  hideOverlays();
+}
+
+function tickTimer() {
+  if (!G || G.paused || G.won || G.stuck) return;
+  G.seconds++;
+  updateHeader();
+}
+
+function fmtTime(s) {
+  return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;
+}
+
+function remaining() {
+  return G.tiles.filter(t => !t.removed).length;
+}
+
+function checkWinStuck() {
+  const rem = remaining();
+  if (rem === 0 && G.tiles.length > 0) {
+    G.won = true;
+    clearInterval(window._timerInterval);
+    showWinOverlay();
+    return;
+  }
+  const free = G.tiles.filter(t => !t.removed && isFree(t, G.tiles));
+  for (let i = 0; i < free.length; i++) {
+    for (let j = i+1; j < free.length; j++) {
+      if (matches(free[i].code, free[j].code)) return;
+    }
+  }
+  if (rem > 0) {
+    G.stuck = true;
+    clearInterval(window._timerInterval);
+    document.getElementById('overlay-stuck').style.display = '';
+  }
+}
+
+// ═══════════════════════════════════════════
+// RENDERING
+// ═══════════════════════════════════════════
+let _roSize = null;
+
+function render() {
+  if (!G) return;
+  const stage    = document.getElementById('board-stage');
+  const wrapper  = document.getElementById('board-wrapper');
+  const rect     = wrapper.getBoundingClientRect();
+
+  const l = G.layout;
+  const pxW = l.width  * STEP_X + TILE_W;
+  const pxH = l.height * STEP_Y + TILE_H + 5 * Z_OFF;
+
+  const scale = Math.min(rect.width / pxW, rect.height / pxH, 1.4);
+
+  stage.style.width  = pxW + 'px';
+  stage.style.height = pxH + 'px';
+  stage.style.transform = `scale(${scale})`;
+
+  // Wrapper: give it a fixed inner size so tiles center correctly
+  const scaledW = Math.round(pxW * scale);
+  const scaledH = Math.round(pxH * scale);
+  stage.style.left = Math.round((rect.width  - scaledW) / 2) + 'px';
+  stage.style.top  = Math.round((rect.height - scaledH) / 2) + 'px';
+
+  // Reuse or recreate tile buttons
+  // Build a map of existing buttons by tile id
+  const existing = new Map();
+  for (const btn of stage.children) {
+    const id = parseInt(btn.dataset.id, 10);
+    if (!isNaN(id)) existing.set(id, btn);
+  }
+
+  const usedIds = new Set();
+  for (const tile of G.tiles) {
+    if (tile.removed) {
+      if (existing.has(tile.id)) {
+        existing.get(tile.id).remove();
+        existing.delete(tile.id);
+      }
+      continue;
+    }
+
+    const free     = isFree(tile, G.tiles);
+    const selected = G.selectedId === tile.id;
+    const hinted   = G.hintedIds.has(tile.id);
+    const left     = tile.x * STEP_X - tile.z * Z_OFF;
+    const top      = tile.y * STEP_Y - tile.z * Z_OFF;
+    const zIndex   = tile.z * 1000 + tile.y * 10 - tile.x;
+
+    let btn = existing.get(tile.id);
+    if (!btn) {
+      btn = document.createElement('button');
+      btn.type = 'button';
+      btn.dataset.id = tile.id;
+      btn.style.width  = TILE_W + 'px';
+      btn.style.height = Math.round(TILE_H) + 'px';
+
+      const baseImg = document.createElement('img');
+      baseImg.className = 'tile-base';
+      baseImg.draggable = false;
+      btn.appendChild(baseImg);
+
+      const art = tileArtUrl(tile.code);
+      if (art) {
+        const artImg = document.createElement('img');
+        artImg.className = 'tile-art';
+        artImg.src = art;
+        artImg.draggable = false;
+        btn.appendChild(artImg);
+      }
+      btn.addEventListener('click', () => handleTileClick(tile.id));
+      stage.appendChild(btn);
+    }
+
+    // Always update dynamic state
+    btn.className = 'tile' + (selected ? ' selected' : '') + (hinted ? ' hinted' : '') + (!free ? ' locked' : '');
+    btn.disabled  = !free;
+    btn.style.left   = left   + 'px';
+    btn.style.top    = top    + 'px';
+    btn.style.zIndex = zIndex;
+    btn.firstElementChild.src = selected ? TILE_SEL : TILE_FACE;
+    usedIds.add(tile.id);
+  }
+
+  // Remove any stale buttons
+  for (const [id, btn] of existing) {
+    if (!usedIds.has(id)) btn.remove();
+  }
+}
+
+function updateHeader() {
+  if (!G) return;
+  document.getElementById('game-time').textContent      = fmtTime(G.seconds);
+  document.getElementById('game-remaining').textContent = remaining();
+  document.getElementById('btn-undo').disabled          = G.history.length === 0;
+}
+
+// ═══════════════════════════════════════════
+// GAME ACTIONS
+// ═══════════════════════════════════════════
+function handleTileClick(id) {
+  if (!G || G.won || G.stuck || G.paused) return;
+  const clicked = G.tiles.find(t => t.id === id);
+  if (!clicked || clicked.removed || !isFree(clicked, G.tiles)) return;
+
+  if (G.selectedId === null) {
+    G.selectedId = id;
+    render();
+    return;
+  }
+  if (G.selectedId === id) {
+    G.selectedId = null;
+    render();
+    return;
+  }
+  const prev = G.tiles.find(t => t.id === G.selectedId);
+  if (!prev || prev.removed) {
+    G.selectedId = id;
+    render();
+    return;
+  }
+  if (matches(prev.code, clicked.code)) {
+    G.history.push({ aId: prev.id, bId: clicked.id });
+    prev.removed    = true;
+    clicked.removed = true;
+    G.selectedId    = null;
+    updateHeader();
+    render();
+    checkWinStuck();
+  } else {
+    G.selectedId = id;
+    render();
+  }
+}
+
+function handleUndo() {
+  if (!G || G.history.length === 0) return;
+  const last = G.history.pop();
+  const a = G.tiles.find(t => t.id === last.aId);
+  const b = G.tiles.find(t => t.id === last.bId);
+  if (a) a.removed = false;
+  if (b) b.removed = false;
+  G.selectedId = null;
+  G.won = false;
+  G.stuck = false;
+  hideOverlays();
+  if (!clearInterval(window._timerInterval) && !G.won && !G.stuck) {
+    window._timerInterval = setInterval(tickTimer, 1000);
+  }
+  updateHeader();
+  render();
+}
+
+function handlePause() {
+  if (!G || G.won || G.stuck) return;
+  G.paused = !G.paused;
+  document.getElementById('btn-pause').textContent = G.paused ? 'Folytat' : 'Szünet';
+  document.getElementById('overlay-pause').style.display = G.paused ? '' : 'none';
+}
+
+function handleHint() {
+  if (!G || G.won || G.stuck || G.paused) return;
+  const free = G.tiles.filter(t => !t.removed && isFree(t, G.tiles));
+  for (let i = 0; i < free.length; i++) {
+    for (let j = i+1; j < free.length; j++) {
+      if (matches(free[i].code, free[j].code)) {
+        G.hintedIds = new Set([free[i].id, free[j].id]);
+        render();
+        clearTimeout(G.hintTimer);
+        G.hintTimer = setTimeout(() => { G.hintedIds = new Set(); render(); }, 1200);
+        return;
+      }
+    }
+  }
+}
+
+function handleNewGame() {
+  if (!G) return;
+  newGame(G.layout.id);
+}
+
+function hideOverlays() {
+  document.getElementById('overlay-pause').style.display = 'none';
+  document.getElementById('overlay-win').style.display   = 'none';
+  document.getElementById('overlay-stuck').style.display = 'none';
+}
+
+function showWinOverlay() {
+  const t = fmtTime(G.seconds);
+  const m = G.history.length;
+  document.getElementById('win-text').textContent = `Pálya teljesítve ${t} alatt, ${m} lépésből.`;
+  document.getElementById('save-status').textContent = '';
+  document.getElementById('player-name').value =
+    localStorage.getItem('mahjong_name') || '';
+  document.getElementById('overlay-win').style.display = '';
+}
+
+// ═══════════════════════════════════════════
+// SCORE SAVING
+// ═══════════════════════════════════════════
+async function submitScore() {
+  if (!G || G.scoreDone) return;
+  const raw  = document.getElementById('player-name').value.trim();
+  const name = raw || 'Névtelen';
+  if (raw) localStorage.setItem('mahjong_name', raw);
+
+  document.getElementById('save-status').textContent = 'Mentés…';
+  try {
+    const res = await fetch(SCORES_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, board: G.layout.id, time: G.seconds, moves: G.history.length }),
+    });
+    if (res.ok) {
+      G.scoreDone = true;
+      document.getElementById('save-status').textContent = '✓ Mentve! Eredmény elmentve a toplistára.';
+    } else {
+      document.getElementById('save-status').textContent = 'Hiba — nem sikerült menteni.';
+    }
+  } catch {
+    document.getElementById('save-status').textContent = 'Hiba — nincs kapcsolat a szerverrel.';
+  }
+}
+
+function skipScore() {
+  G.scoreDone = true;
+  document.getElementById('overlay-win').style.display = 'none';
+}
+
+// ═══════════════════════════════════════════
+// VISIBILITY / PAUSE
+// ═══════════════════════════════════════════
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden && G && !G.paused && !G.won && !G.stuck) handlePause();
+});
+
+// ═══════════════════════════════════════════
+// VIEWS
+// ═══════════════════════════════════════════
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showHome() {
+  clearInterval(window._timerInterval);
+  showView('view-home');
+}
+
+function showGame(layoutId) {
+  document.getElementById('game-title').textContent =
+    LAYOUTS.find(l => l.id === layoutId).name;
+  document.getElementById('btn-pause').textContent = 'Szünet';
+  showView('view-game');
+  // Wait one frame for the wrapper to have layout dimensions before rendering
+  requestAnimationFrame(() => { newGame(layoutId); });
+}
+
+function showLeaderboard() {
+  showView('view-leaderboard');
+  buildLbTabs();
+  loadLb(1);
+}
+
+// ═══════════════════════════════════════════
+// LEADERBOARD
+// ═══════════════════════════════════════════
+let _lbActive = 1;
+
+function buildLbTabs() {
+  const el = document.getElementById('lb-tabs');
+  el.innerHTML = '';
+  for (const l of LAYOUTS) {
+    const btn = document.createElement('button');
+    btn.className = 'lb-tab' + (l.id === _lbActive ? ' active' : '');
+    btn.textContent = l.name;
+    btn.onclick = () => loadLb(l.id);
+    el.appendChild(btn);
+  }
+}
+
+async function loadLb(boardId) {
+  _lbActive = boardId;
+  buildLbTabs();
+  const content = document.getElementById('lb-content');
+  content.innerHTML = '<p class="lb-loading">Betöltés…</p>';
+  try {
+    const res  = await fetch(`${SCORES_API}?board=${boardId}`);
+    const data = await res.json();
+    renderLb(data, boardId);
+  } catch {
+    content.innerHTML = '<p class="lb-empty">Nem sikerült betölteni a toplistát.<br>Ellenőrizd, hogy a scores.php elérhető-e a szerveren.</p>';
+  }
+}
+
+function renderLb(scores, boardId) {
+  const name = LAYOUTS.find(l => l.id === boardId)?.name ?? '';
+  const content = document.getElementById('lb-content');
+  if (!scores.length) {
+    content.innerHTML = `<p class="lb-empty">${name} — még nincs eredmény.</p>`;
+    return;
+  }
+  const rows = scores.map((s, i) => `
+    <tr>
+      <td>${i+1}.</td>
+      <td>${esc(s.name)}</td>
+      <td>${fmtTime(s.time)}</td>
+      <td>${s.moves}</td>
+      <td style="opacity:.5;font-size:.75rem">${s.date ?? ''}</td>
+    </tr>`).join('');
+  content.innerHTML = `
+    <table class="lb-table">
+      <thead><tr><th>#</th><th>Név</th><th>Idő</th><th>Lépés</th><th>Dátum</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+function esc(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ═══════════════════════════════════════════
+// HOME PAGE SETUP
+// ═══════════════════════════════════════════
+(function buildHome() {
+  const grid = document.getElementById('board-grid');
+  for (const l of LAYOUTS) {
+    const btn = document.createElement('button');
+    btn.className = 'board-card';
+    const layers = Math.max(...l.pos.map(p => p.z)) + 1;
+    btn.innerHTML = `
+      <div class="num">Pálya ${l.id}</div>
+      <div class="name">${l.name}</div>
+      <p class="desc">${l.desc}</p>
+      <div class="meta">${l.pos.length} kő · ${layers} szint</div>`;
+    btn.onclick = () => showGame(l.id);
+    grid.appendChild(btn);
+  }
+})();
+
+// Resize: re-render board when window size changes
+window.addEventListener('resize', () => { if (G) render(); });
+</script>
+</body>
+</html>
